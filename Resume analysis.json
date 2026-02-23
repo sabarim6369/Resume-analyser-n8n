@@ -1,0 +1,203 @@
+{
+  "name": "Resume analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject:\"resume analysis\" has:attachment"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "b8ec65ec-c884-48f6-a393-9804883bd4f0",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ExG6tPES8YzAxXp7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "resume_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        -32
+      ],
+      "id": "2db6d2a1-fa5a-4816-aba4-03e8474b61e9",
+      "name": "Get a message",
+      "webhookId": "8d586a83-ac00-413b-98bc-0d84bc23c9a6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ExG6tPES8YzAxXp7",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert resume reviewer.\n\nAnalyze this resume and return:\n\n1) Strengths\n2) Weaknesses\n3) Improvement Suggestions\n4) ATS Score (0-100)\n\nResume:\n{{ $json.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        256,
+        -32
+      ],
+      "id": "a289a38c-c427-44db-8b69-93e971bde174",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        272,
+        80
+      ],
+      "id": "432da2f8-bdf8-44ac-85a5-33c9c3a78bf5",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "fAnr2Io28JIdlBnA",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        -32
+      ],
+      "id": "225791dc-3d92-45ae-b783-83a13d76b4cf",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $node[\"Get a message\"].json.from.value[0].address }}",
+        "subject": "Resume Analysis Result",
+        "message": "=<div style=\"font-family: Arial, Helvetica, sans-serif; background:#f5f7fb; padding:24px;\">\n  <div style=\"max-width:700px;margin:auto;background:#ffffff;padding:30px;border-radius:10px;box-shadow:0 0 12px rgba(0,0,0,0.08);\">\n\n    <h2 style=\"color:#2b6cb0;text-align:center;margin-bottom:10px;\">\n      📄 Resume Analysis Report\n    </h2>\n\n    <p style=\"text-align:center;color:#666;margin-top:0;\">\n      Generated automatically using AI\n    </p>\n\n    <hr style=\"border:none;border-top:1px solid #e5e7eb;margin:20px 0;\">\n\n    <div style=\"white-space:pre-line;font-size:14px;line-height:1.6;color:#111;\">\n      {{ $json.text }}\n    </div>\n\n    <hr style=\"border:none;border-top:1px solid #e5e7eb;margin:25px 0;\">\n\n    <p style=\"font-size:12px;color:#777;text-align:center;\">\n      This report was generated automatically using n8n & Groq AI.\n    </p>\n\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        -32
+      ],
+      "id": "64676d18-f6b8-41ce-9f27-df852714c3b7",
+      "name": "Send a message",
+      "webhookId": "3bd8f6ba-8b9e-49c3-ab29-ab39bc141b16",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ExG6tPES8YzAxXp7",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2a808bac-9c64-48bf-bcbe-16ee9470b829",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "46be52f0515ecf85c77064c456443c89ed3314fddbec0b2f17b6cd5153a6ead1"
+  },
+  "id": "7RCsftaADbKvkBDZ",
+  "tags": []
+}
